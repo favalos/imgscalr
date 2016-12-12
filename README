@@ -1,14 +1,16 @@
 imgscalr - Java Image-Scaling Library
-http://www.thebuzzmedia.com/software/imgscalr-java-image-scaling-library/
 
-
-				=================================================
-				  See imgscalr in action at http://imgscalr.com
-				=================================================
-
+This is a subset of imgscalr features due to cloud requirements. 
+Running imgscalr in cloud environment with no access to properties, for this reason
+replaced custom log implementation with Log4j. By other hand, removed the async module. 
 
 Changelog
 ---------
+
+4.2-Cloud
+
+	* Replaced custom LOG by LOG4j.
+
 4.2
 	* Added support for a new Method.ULTRA_QUALITY scaling method.
 	

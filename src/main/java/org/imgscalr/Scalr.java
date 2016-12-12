@@ -38,6 +38,8 @@ import java.awt.image.RescaleOp;
 
 import javax.imageio.ImageIO;
 
+import org.apache.log4j.Logger;
+
 /**
  * Class used to implement performant, high-quality and intelligent image
  * scaling and manipulation algorithms in native Java 2D.
@@ -185,70 +187,18 @@ import javax.imageio.ImageIO;
  * performing any of the provided operations and is safe to call simultaneously
  * from multiple threads.
  * <h3>Logging</h3>
- * This class implements all its debug logging via the
- * {@link #log(int, String, Object...)} method. At this time logging is done
- * directly to <code>System.out</code> via the <code>printf</code> method. This
- * allows the logging to be light weight and easy to capture (every imgscalr log
- * message is prefixed with the {@link #LOG_PREFIX} string) while adding no
- * dependencies to the library.
- * <p/>
- * Implementation of logging in this class is as efficient as possible; avoiding
- * any calls to the logger method or passing of arguments if logging is not
- * enabled to avoid the (hidden) cost of constructing the Object[] argument for
- * the varargs-based method call.
+ * This class implements Log4j for logging.
  * 
  * @author Riyad Kalla (software@thebuzzmedia.com)
  * @since 1.1
  */
 public class Scalr {
+	
 	/**
-	 * System property name used to define the debug boolean flag.
-	 * <p/>
-	 * Value is "<code>imgscalr.debug</code>".
+	 * Log4j logger implementation.
 	 */
-	public static final String DEBUG_PROPERTY_NAME = "imgscalr.debug";
-
-	/**
-	 * System property name used to define a custom log prefix.
-	 * <p/>
-	 * Value is "<code>imgscalr.logPrefix</code>".
-	 */
-	public static final String LOG_PREFIX_PROPERTY_NAME = "imgscalr.logPrefix";
-
-	/**
-	 * Flag used to indicate if debugging output has been enabled by setting the
-	 * "<code>imgscalr.debug</code>" system property to <code>true</code>. This
-	 * value will be <code>false</code> if the "<code>imgscalr.debug</code>"
-	 * system property is undefined or set to <code>false</code>.
-	 * <p/>
-	 * This property can be set on startup with:<br/>
-	 * <code>
-	 * -Dimgscalr.debug=true
-	 * </code> or by calling {@link System#setProperty(String, String)} to set a
-	 * new property value for {@link #DEBUG_PROPERTY_NAME} before this class is
-	 * loaded.
-	 * <p/>
-	 * Default value is <code>false</code>.
-	 */
-	public static final boolean DEBUG = Boolean.getBoolean(DEBUG_PROPERTY_NAME);
-
-	/**
-	 * Prefix to every log message this library logs. Using a well-defined
-	 * prefix helps make it easier both visually and programmatically to scan
-	 * log files for messages produced by this library.
-	 * <p/>
-	 * This property can be set on startup with:<br/>
-	 * <code>
-	 * -Dimgscalr.logPrefix=&lt;YOUR PREFIX HERE&gt;
-	 * </code> or by calling {@link System#setProperty(String, String)} to set a
-	 * new property value for {@link #LOG_PREFIX_PROPERTY_NAME} before this
-	 * class is loaded.
-	 * <p/>
-	 * Default value is "<code>[imgscalr] </code>" (including the space).
-	 */
-	public static final String LOG_PREFIX = System.getProperty(
-			LOG_PREFIX_PROPERTY_NAME, "[imgscalr] ");
-
+	public static final Logger LOG = Logger.getLogger(Scalr.class);
+	
 	/**
 	 * A {@link ConvolveOp} using a very light "blur" kernel that acts like an
 	 * anti-aliasing filter (softens the image a bit) when applied to an image.
@@ -343,14 +293,6 @@ public class Scalr {
 	 */
 	public static final ColorConvertOp OP_GRAYSCALE = new ColorConvertOp(
 			ColorSpace.getInstance(ColorSpace.CS_GRAY), null);
-
-	/**
-	 * Static initializer used to prepare some of the variables used by this
-	 * class.
-	 */
-	static {
-		log(0, "Debug output ENABLED");
-	}
 
 	/**
 	 * Used to define the different scaling hints that the algorithm can use.
@@ -615,7 +557,8 @@ public class Scalr {
 	public static BufferedImage apply(BufferedImage src, BufferedImageOp... ops)
 			throws IllegalArgumentException, ImagingOpException {
 	  long t = -1;
-	  if (DEBUG)
+	  
+	  if (LOG.isDebugEnabled())
 	    t = System.currentTimeMillis();
 
 		if (src == null)
@@ -654,14 +597,14 @@ public class Scalr {
 		if (!(type == BufferedImage.TYPE_INT_RGB || type == BufferedImage.TYPE_INT_ARGB))
 			src = copyToOptimalImage(src);
 
-		if (DEBUG)
-			log(0, "Applying %d BufferedImageOps...", ops.length);
+
+		LOG.debug(String.format("Applying %d BufferedImageOps...", ops.length));
 
 		boolean hasReassignedSrc = false;
 
 		for (int i = 0; i < ops.length; i++) {
       long subT = -1;
-      if (DEBUG)
+      if (LOG.isDebugEnabled())
         subT = System.currentTimeMillis();
 			BufferedImageOp op = ops[i];
 
@@ -669,9 +612,9 @@ public class Scalr {
 			if (op == null)
 				continue;
 
-			if (DEBUG)
-				log(1, "Applying BufferedImageOp [class=%s, toString=%s]...",
-						op.getClass(), op.toString());
+
+			LOG.debug(String.format("Applying BufferedImageOp [class=%s, toString=%s]...",
+						op.getClass(), op.toString()));
 
 			/*
 			 * Must use op.getBounds instead of src.getWidth and src.getHeight
@@ -726,16 +669,14 @@ public class Scalr {
 			 */
 			hasReassignedSrc = true;
 
-			if (DEBUG)
-				log(1,
+			LOG.debug(String.format(
 						"Applied BufferedImageOp in %d ms, result [width=%d, height=%d]",
 						System.currentTimeMillis() - subT, result.getWidth(),
-						result.getHeight());
+						result.getHeight()));
 		}
 
-		if (DEBUG)
-			log(0, "All %d BufferedImageOps applied in %d ms", ops.length,
-					System.currentTimeMillis() - t);
+		LOG.debug(String.format("All %d BufferedImageOps applied in %d ms", ops.length,
+					System.currentTimeMillis() - t));
 
 		return src;
 	}
@@ -841,7 +782,7 @@ public class Scalr {
 			int width, int height, BufferedImageOp... ops)
 			throws IllegalArgumentException, ImagingOpException {
     long t = -1;
-    if (DEBUG)
+    if (LOG.isDebugEnabled())
       t = System.currentTimeMillis();
 
 		if (src == null)
@@ -864,10 +805,8 @@ public class Scalr {
 							+ "] must be <= src.getHeight() [" + srcHeight
 							+ "]");
 
-		if (DEBUG)
-			log(0,
-					"Cropping Image [width=%d, height=%d] to [x=%d, y=%d, width=%d, height=%d]...",
-					srcWidth, srcHeight, x, y, width, height);
+		LOG.debug(String.format("Cropping Image [width=%d, height=%d] to [x=%d, y=%d, width=%d, height=%d]...",
+					srcWidth, srcHeight, x, y, width, height));
 
 		// Create a target image of an optimal type to render into.
 		BufferedImage result = createOptimalImage(src, width, height);
@@ -882,8 +821,7 @@ public class Scalr {
 				null);
 		g.dispose();
 
-		if (DEBUG)
-			log(0, "Cropped Image in %d ms", System.currentTimeMillis() - t);
+		LOG.debug(String.format("Cropped Image in %d ms", System.currentTimeMillis() - t));
 
 		// Apply any optional operations (if specified).
 		if (ops != null && ops.length > 0)
@@ -1001,7 +939,7 @@ public class Scalr {
 			Color color, BufferedImageOp... ops)
 			throws IllegalArgumentException, ImagingOpException {
     long t = -1;
-    if (DEBUG)
+    if (LOG.isDebugEnabled())
       t = System.currentTimeMillis();
 
 		if (src == null)
@@ -1025,10 +963,8 @@ public class Scalr {
 		int newWidth = srcWidth + sizeDiff;
 		int newHeight = srcHeight + sizeDiff;
 
-		if (DEBUG)
-			log(0,
-					"Padding Image from [originalWidth=%d, originalHeight=%d, padding=%d] to [newWidth=%d, newHeight=%d]...",
-					srcWidth, srcHeight, padding, newWidth, newHeight);
+		LOG.debug(String.format("Padding Image from [originalWidth=%d, originalHeight=%d, padding=%d] to [newWidth=%d, newHeight=%d]...",
+					srcWidth, srcHeight, padding, newWidth, newHeight));
 
 		boolean colorHasAlpha = (color.getAlpha() != 255);
 		boolean imageHasAlpha = (src.getTransparency() != BufferedImage.OPAQUE);
@@ -1041,16 +977,12 @@ public class Scalr {
 		 * contain it.
 		 */
 		if (colorHasAlpha || imageHasAlpha) {
-			if (DEBUG)
-				log(1,
-						"Transparency FOUND in source image or color, using ARGB image type...");
+			LOG.debug("Transparency FOUND in source image or color, using ARGB image type...");
 
 			result = new BufferedImage(newWidth, newHeight,
 					BufferedImage.TYPE_INT_ARGB);
 		} else {
-			if (DEBUG)
-				log(1,
-						"Transparency NOT FOUND in source image or color, using RGB image type...");
+			LOG.debug("Transparency NOT FOUND in source image or color, using RGB image type...");
 
 			result = new BufferedImage(newWidth, newHeight,
 					BufferedImage.TYPE_INT_RGB);
@@ -1069,8 +1001,7 @@ public class Scalr {
 		g.drawImage(src, padding, padding, null);
 		g.dispose();
 
-		if (DEBUG)
-			log(0, "Padding Applied in %d ms", System.currentTimeMillis() - t);
+		LOG.debug(String.format("Padding Applied in %d ms", System.currentTimeMillis() - t));
 
 		// Apply any optional operations (if specified).
 		if (ops != null && ops.length > 0)
@@ -1576,7 +1507,7 @@ public class Scalr {
 			BufferedImageOp... ops) throws IllegalArgumentException,
 			ImagingOpException {
     long t = -1;
-    if (DEBUG)
+    if (LOG.isDebugEnabled())
       t = System.currentTimeMillis();
 
 		if (src == null)
@@ -1600,12 +1531,10 @@ public class Scalr {
 		// <= 1 is a square or landscape-oriented image, > 1 is a portrait.
 		float ratio = ((float) currentHeight / (float) currentWidth);
 
-		if (DEBUG)
-			log(0,
-					"Resizing Image [size=%dx%d, resizeMode=%s, orientation=%s, ratio(H/W)=%f] to [targetSize=%dx%d]",
+		LOG.debug(String.format("Resizing Image [size=%dx%d, resizeMode=%s, orientation=%s, ratio(H/W)=%f] to [targetSize=%dx%d]",
 					currentWidth, currentHeight, resizeMode,
 					(ratio <= 1 ? "Landscape/Square" : "Portrait"), ratio,
-					targetWidth, targetHeight);
+					targetWidth, targetHeight));
 
 		/*
 		 * First determine if ANY size calculation needs to be done, in the case
@@ -1625,9 +1554,7 @@ public class Scalr {
 		 * within and it will do the right thing without mangling the result.
 		 */
 		if (resizeMode == Mode.FIT_EXACT) {
-			if (DEBUG)
-				log(1,
-						"Resize Mode FIT_EXACT used, no width/height checking or re-calculation will be done.");
+			LOG.debug("Resize Mode FIT_EXACT used, no width/height checking or re-calculation will be done.");
 		} else if (resizeMode == Mode.BEST_FIT_BOTH) {
 			float requestedHeightScaling = ((float) targetHeight / (float) currentHeight);
 			float requestedWidthScaling = ((float) targetWidth / (float) currentWidth);
@@ -1639,8 +1566,7 @@ public class Scalr {
 			if (targetHeight == currentHeight && targetWidth == currentWidth)
 				return src;
 
-			if (DEBUG)
-				log(1, "Auto-Corrected width and height based on scalingRatio %d.", actualScaling);
+			LOG.debug(String.format("Auto-Corrected width and height based on scalingRatio %f.", actualScaling));
 		} else {
 			if ((ratio <= 1 && resizeMode == Mode.AUTOMATIC)
 					|| (resizeMode == Mode.FIT_TO_WIDTH)) {
@@ -1658,10 +1584,9 @@ public class Scalr {
 				 */
 				targetHeight = (int)Math.ceil((float) targetWidth * ratio);
 
-				if (DEBUG && originalTargetHeight != targetHeight)
-					log(1,
-							"Auto-Corrected targetHeight [from=%d to=%d] to honor image proportions.",
-							originalTargetHeight, targetHeight);
+				if (originalTargetHeight != targetHeight)
+					LOG.debug(String.format("Auto-Corrected targetHeight [from=%d to=%d] to honor image proportions.",
+							originalTargetHeight, targetHeight));
 			} else {
 				// First make sure we need to do any work in the first place
 				if (targetHeight == src.getHeight())
@@ -1676,10 +1601,10 @@ public class Scalr {
 				 */
 				targetWidth = Math.round((float) targetHeight / ratio);
 
-				if (DEBUG && originalTargetWidth != targetWidth)
-					log(1,
+				if (originalTargetWidth != targetWidth)
+					LOG.debug(String.format(
 							"Auto-Corrected targetWidth [from=%d to=%d] to honor image proportions.",
-							originalTargetWidth, targetWidth);
+							originalTargetWidth, targetWidth));
 			}
 		}
 
@@ -1688,8 +1613,7 @@ public class Scalr {
 			scalingMethod = determineScalingMethod(targetWidth, targetHeight,
 					ratio);
 
-		if (DEBUG)
-			log(1, "Using Scaling Method: %s", scalingMethod);
+		LOG.debug(String.format("Using Scaling Method: %s", scalingMethod));
 
 		// Now we scale the image
 		if (scalingMethod == Scalr.Method.SPEED) {
@@ -1711,9 +1635,7 @@ public class Scalr {
 			 * algorithm for the best result.
 			 */
 			if (targetWidth > currentWidth || targetHeight > currentHeight) {
-				if (DEBUG)
-					log(1,
-							"QUALITY scale-up, a single BICUBIC scale operation will be used...");
+				LOG.debug("QUALITY scale-up, a single BICUBIC scale operation will be used...");
 
 				/*
 				 * BILINEAR and BICUBIC look similar the smaller the scale jump
@@ -1726,9 +1648,7 @@ public class Scalr {
 				result = scaleImage(src, targetWidth, targetHeight,
 						RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 			} else {
-				if (DEBUG)
-					log(1,
-							"QUALITY scale-down, incremental scaling will be used...");
+				LOG.debug("QUALITY scale-down, incremental scaling will be used...");
 
 				/*
 				 * Originally we wanted to use BILINEAR interpolation here
@@ -1746,8 +1666,7 @@ public class Scalr {
 			}
 		}
 
-		if (DEBUG)
-			log(0, "Resized Image in %d ms", System.currentTimeMillis() - t);
+		LOG.debug(String.format("Resized Image in %d ms", System.currentTimeMillis() - t));
 
 		// Apply any optional operations (if specified).
 		if (ops != null && ops.length > 0)
@@ -1799,7 +1718,7 @@ public class Scalr {
 			BufferedImageOp... ops) throws IllegalArgumentException,
 			ImagingOpException {
     long t = -1;
-    if (DEBUG)
+    if (LOG.isDebugEnabled())
       t = System.currentTimeMillis();
 
 		if (src == null)
@@ -1807,8 +1726,7 @@ public class Scalr {
 		if (rotation == null)
 			throw new IllegalArgumentException("rotation cannot be null");
 
-		if (DEBUG)
-			log(0, "Rotating Image [%s]...", rotation);
+		LOG.debug(String.format("Rotating Image [%s]...", rotation));
 
 		/*
 		 * Setup the default width/height values from our image.
@@ -1906,54 +1824,15 @@ public class Scalr {
 		g2d.drawImage(src, tx, null);
 		g2d.dispose();
 
-		if (DEBUG)
-			log(0, "Rotation Applied in %d ms, result [width=%d, height=%d]",
+		LOG.debug(String.format("Rotation Applied in %d ms, result [width=%d, height=%d]",
 					System.currentTimeMillis() - t, result.getWidth(),
-					result.getHeight());
+					result.getHeight()));
 
 		// Apply any optional operations (if specified).
 		if (ops != null && ops.length > 0)
 			result = apply(result, ops);
 
 		return result;
-	}
-
-	/**
-	 * Used to write out a useful and well-formatted log message by any piece of
-	 * code inside of the imgscalr library.
-	 * <p/>
-	 * If a message cannot be logged (logging is disabled) then this method
-	 * returns immediately.
-	 * <p/>
-	 * <strong>NOTE</strong>: Because Java will auto-box primitive arguments
-	 * into Objects when building out the <code>params</code> array, care should
-	 * be taken not to call this method with primitive values unless
-	 * {@link Scalr#DEBUG} is <code>true</code>; otherwise the VM will be
-	 * spending time performing unnecessary auto-boxing calculations.
-	 * 
-	 * @param depth
-	 *            The indentation level of the log message.
-	 * @param message
-	 *            The log message in <a href=
-	 *            "http://download.oracle.com/javase/6/docs/api/java/util/Formatter.html#syntax"
-	 *            >format string syntax</a> that will be logged.
-	 * @param params
-	 *            The parameters that will be swapped into all the place holders
-	 *            in the original messages before being logged.
-	 * 
-	 * @see Scalr#LOG_PREFIX
-	 * @see Scalr#LOG_PREFIX_PROPERTY_NAME
-	 */
-	protected static void log(int depth, String message, Object... params) {
-		if (Scalr.DEBUG) {
-			System.out.print(Scalr.LOG_PREFIX);
-
-			for (int i = 0; i < depth; i++)
-				System.out.print("\t");
-
-			System.out.printf(message, params);
-			System.out.println();
-		}
 	}
 
 	/**
@@ -2133,8 +2012,7 @@ public class Scalr {
 		else if (length <= Scalr.THRESHOLD_BALANCED_SPEED)
 			result = Method.BALANCED;
 
-		if (DEBUG)
-			log(2, "AUTOMATIC scaling method selected: %s", result.name());
+		LOG.debug(String.format("AUTOMATIC scaling method selected: %s", result.name()));
 
 		return result;
 	}
@@ -2301,9 +2179,8 @@ public class Scalr {
 					&& prevCurrentHeight == currentHeight)
 				break;
 
-			if (DEBUG)
-				log(2, "Scaling from [%d x %d] to [%d x %d]", prevCurrentWidth,
-						prevCurrentHeight, currentWidth, currentHeight);
+			LOG.debug(String.format("Scaling from [%d x %d] to [%d x %d]", prevCurrentWidth,
+						prevCurrentHeight, currentWidth, currentHeight));
 
 			// Render the incremental scaled image.
 			BufferedImage incrementalImage = scaleImage(src, currentWidth,
@@ -2340,8 +2217,7 @@ public class Scalr {
 			incrementCount++;
 		} while (currentWidth != targetWidth || currentHeight != targetHeight);
 
-		if (DEBUG)
-			log(2, "Incrementally Scaled Image in %d steps.", incrementCount);
+		LOG.debug(String.format("Incrementally Scaled Image in %d steps.", incrementCount));
 
 		/*
 		 * Once the loop has exited, the src image argument is now our scaled

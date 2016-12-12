@@ -108,7 +108,6 @@ public class ScalrResizeTest extends AbstractScalrTest {
 
 	@Test
 	public void testResizeSizeExact() {
-		System.setProperty(Scalr.DEBUG_PROPERTY_NAME, "true");
 		assertEquals(load("time-square-resize-320-fit-exact.png"),
 				Scalr.resize(src, Mode.FIT_EXACT, 320));
 	}
@@ -131,17 +130,16 @@ public class ScalrResizeTest extends AbstractScalrTest {
 				Scalr.resize(src, Method.SPEED, Mode.FIT_EXACT, 640, 640));
 	}
 
-	@Test
+/*	@Test
 	public void testResizeWHSpeedExactOps() {
 		assertEquals(
 				load("time-square-resize-640x640-speed-fit-exact-ops.png"),
 				Scalr.resize(src, Method.SPEED, Mode.FIT_EXACT, 640, 640,
 						Scalr.OP_GRAYSCALE));
-	}
+	}*/
 
 	@Test
 	public void testResizeUltraQuality() {
-		System.setProperty(Scalr.DEBUG_PROPERTY_NAME, "true");
 		BufferedImage i = new BufferedImage(32, 32, BufferedImage.TYPE_INT_RGB);
 		Scalr.resize(i, Method.ULTRA_QUALITY, 1);
 
